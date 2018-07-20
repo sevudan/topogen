@@ -36,8 +36,9 @@ def starTopology(G, number_of_rr,total_nodes):
         nx.set_edge_attributes(G, {(0,i): {'ifd':'ge-0/0/{}'.format(i)}})
         i += 1
     return G
-def fullMeshTopology(G):
 
+def fullMeshTopology(G):
+    pass
 
 
 """
