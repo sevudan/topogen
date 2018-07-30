@@ -20,8 +20,8 @@ def topology():
         starTopology(G,total_nodes, number_of_rr, logical_system)
     else: 
         G = nx.complete_graph(total_nodes)
-        fullMeshTopology(G)
-    return G.edges(), logical_system
+        fullMeshTopology(G, number_of_rr,logical_system)
+    return G.nodes(), logical_system
 
 def genEdge(G, number_of_rr, logical_system):
     """
@@ -41,7 +41,7 @@ def genEdge(G, number_of_rr, logical_system):
         map(lambda num_router: nx.set_edge_attributes(G, {num_router: {'ifd':'{}-0/0/{}'.format(ifd, num_router)}}), G.edges())
     return G
 
-def starTopology(G, number_of_rr, total_nodes, logical_system):
+def starTopology(G,total_nodes, number_of_rr, logical_system):
     """
     Function used for create Graph of type a star.
     """
