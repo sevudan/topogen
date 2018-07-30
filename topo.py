@@ -11,52 +11,53 @@ def __main__():
 def topology():
     """
     Function used for create new Graph.
-    """
+    """ 
     total_nodes = 5
-    number_of_rr = 1
-    onerouter = True
+    number_of_rr = 1   
+    logical_system = True
     if number_of_rr > 0:
         G = nx.Graph(name='Network topology - Star')
-        starTopology(G,number_of_rr)
+        starTopology(G,total_nodes, number_of_rr, logical_system)
     else: 
         G = nx.complete_graph(total_nodes)
         fullMeshTopology(G)
-    return G.edges(), onerouter
+    return G.edges(), logical_system
 
-def genEdge(i, number_of_rr, total_nodes, onerouter):
+def genEdge(G, number_of_rr, logical_system):
     """
-    Create edges for Graph.
-    """
-    if onerouter is True:    
-        i = 0
-        while i < total_nodes:
-            if number_of_rr == 0:
-                nx.set_node_attributes(G, {i:{'role':'Router'}})
-                nx.set_edge_attributes(G, {(i,0): {'ifd':'ge-0/0/1'}})
-                nx.set_edge_attributes(G, {(0,i): {'ifd':'ge-0/0/{}'.format(i)}})
-                i += 1
-            else:
-                nx.set_edge_attributes(G, {(0,i): {'ifd':'ge-0/0/{}'.format(i)}})
-                i += 1
+    Create edges attributes for Graph.
+    """    
+    if logical_system is True:
+        ifd = 'lt'
     else:
-        pass
+        ifd = 'ge'
+    num_router = 1
+    if number_of_rr != 0:
+        map(lambda num_router: nx.set_edge_attributes(G, {num_router:{'role':'Router'}}), G.edges())
+        map(lambda x: nx.set_edge_attributes(G, {x: {'ifd':'{}-0/0/1'.format(ifd)}}), G.edges())
+        map(lambda x,num_router: nx.set_edge_attributes(G, {x: {'ifd':'{}-0/0/{}'.format(ifd,num_router)}}), G.edges())        
+    else:
+        num_router = 0
+        map(lambda num_router: nx.set_edge_attributes(G, {num_router: {'ifd':'{}-0/0/{}'.format(ifd, num_router)}}), G.edges())
+    return G
 
-def starTopology(G, number_of_rr, total_nodes, onerouter):
+def starTopology(G, number_of_rr, total_nodes, logical_system):
     """
     Function used for create Graph of type a star.
     """
     nodes = list(range(0,total_nodes + 1))
     nx.add_star(G, nodes)
     nx.set_node_attributes(G, {0: {'type':'Route-Reflector'}})
-    i = 1
-    genEdge(i, number_of_rr, total_nodes)
+    genEdge(G, number_of_rr, logical_system)
+    return G
 
-def fullMeshTopology(G, total_nodes):
+def fullMeshTopology(G,number_of_rr,logical_system):
     """
     Generate new topology type of Full Mesh.
     """
     i = 0
-    genEdge(i, number_of_rr, total_nodes)
+    genEdge(G, number_of_rr,logical_system)
+    return G
 
 
 nx.draw(G, with_labels=True)
