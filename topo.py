@@ -44,6 +44,7 @@ def genEdge(G, number_of_rr, logical_system, nodes):
 def starTopology(G, number_of_rr, total_nodes, logical_system):
     """
     Function used for create Graph of type a star.
+	
     """
     nodes = list(range(0,total_nodes + 1))
     nx.add_star(G, nodes)
