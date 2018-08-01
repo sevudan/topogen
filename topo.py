@@ -13,7 +13,7 @@ def topology():
     number_of_rr = 1   
     logical_system = True
     number = list(range(0,total_nodes + 1))
-    nodes = list(map(lambda x: 'R{}'.format(x),number))
+    nodes = sorted(list(map(lambda x: 'R{}'.format(x),number)))
     if number_of_rr > 0:
         G = nx.DiGraph(name='Network topology - Star')
         starTopology(G, nodes, number_of_rr, logical_system)
@@ -31,9 +31,9 @@ def genEdge(G, nodes, number_of_rr, logical_system):
     else:
         ifd = 'ge'
     if number_of_rr != 0:
-        ifl_num = list(range(0,len(edges) + 1))
-        [*map(lambda edges,ifl_num: nx.set_edge_attributes(G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}}), sorted(G.edges()), ifl_num[1:])]
         edges_to_rr = tuple(zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:])))
+        ifl_num = list(range(0,len(edges_to_rr) + 1))
+        [*map(lambda edges,ifl_num: nx.set_edge_attributes(G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}}), sorted(G.edges()), ifl_num[1:])]
         G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
     else:
         [*map(lambda edges, node: nx.set_edge_attributes(G, {edges: {'ifd':'{}-0/0/{}'.format(ifd, node)}}), G.edges(), nodes)]
