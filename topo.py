@@ -20,9 +20,9 @@ def topology():
     else: 
         G = nx.complete_graph(total_nodes)
         fullMeshTopology(G)
-    return G, plt.show()
+    return G
 
-def genEdge(G, number_of_rr, logical_system, nodes):
+def genEdge(G, nodes, number_of_rr, logical_system):
     """
     Create edges attributes for Graph.
     """    
@@ -31,7 +31,6 @@ def genEdge(G, number_of_rr, logical_system, nodes):
     else:
         ifd = 'ge'
     if number_of_rr != 0:
-        #[*map(lambda node: nx.set_node_attributes(G, {node:{'role':'Router'}}), nodes[1:])]
         ifl_num = list(range(0,len(edges) + 1))
         [*map(lambda edges,ifl_num: nx.set_edge_attributes(G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}}), sorted(G.edges()), ifl_num[1:])]
         edges_to_rr = tuple(zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:])))
@@ -46,7 +45,7 @@ def starTopology(G, nodes, number_of_rr, logical_system):
     """
     nx.add_star(G, nodes)
     nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector'}})
-    genEdge(G, number_of_rr, logical_system, nodes)
+    genEdge(G, nodes, number_of_rr, logical_system)
     return G
 
 """
@@ -58,7 +57,7 @@ def fullMeshTopology(G,number_of_rr,logical_system):
     genEdge(G, number_of_rr,logical_system)
     return G
 """
-node_labels = nx.get_node_attributes(G, 'role')
+node_labels = nx.get_edge_attributes(G, 'ifd')
 nx.draw_networkx_labels(G, pos, node_labels)
 nx.draw(G, with_labels=True)
 plt.show()
