@@ -17,8 +17,8 @@ def getTemplate():
     """
     with open('/home/sevudan/Scripts/projects/topogen/template.cfg') as file:
         data = file.read()
-    template = Template(data)
-    return(template)
+    return Template(data)
+    
 
 def getParams():
     """
@@ -27,18 +27,17 @@ def getParams():
     num = nx.number_of_edges(G)
     ifl  = list(range(0,num+1,2))
     pifl = list(range(1,num+2,2))
-    return(ifl, pifl)
+    units = {'unit':ifl, 'punit':pifl}
+    return units
 
 def genConfig():
     """
     Write result into file $PATH/result.cfg
     """
-    getTemplate()
-    getParams()
+    template = getTemplate()
+    units = getParams()
     nodes = sorted(G.nodes())
-    node = [*map(lambda hostname: template.render(node=hostname), nodes)]
-    [*map(lambda unit: template.render(unit=ifl)), ifl]
-    [*map(lambda runit: template.render(runit=pifl)), pifl]
+    node = [*map(lambda hostname,unit,punit: template.render(node=hostname,ifl=unit,pu=punit), nodes, units['unit'], units['punit'])]
     result = '\n'.join(node)
     with open('/home/sevudan/Scripts/projects/topogen/result.cfg','w') as cfg:
         cfg.write(result)
