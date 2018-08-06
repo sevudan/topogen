@@ -1,6 +1,6 @@
 #!/usr/sbin/python3.5
 
-
+import gennet as net
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -23,7 +23,7 @@ def topology():
         fullMeshTopology(G)
     return G
 
-def genEdge(G, nodes, number_of_rr, logical_system):
+def genStarEdge(G, nodes, loopbacks, logical_system):
     """
     Create edges attributes for Graph.
     """    
@@ -31,23 +31,37 @@ def genEdge(G, nodes, number_of_rr, logical_system):
         ifd = 'lt'
     else: 
         ifd = 'ge'
-    if number_of_rr != 0:
-        edges_to_rr = tuple(zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:])))
-        ifl_num = list(range(0,len(edges_to_rr) + 1))
-        [*map(lambda edges,ifl_num: nx.set_edge_attributes(G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}}), sorted(G.edges()), ifl_num[1:])]
-        G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
+    edges_to_rr = zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:]))
+    ifl_num = range(0,len(edges_to_rr) + 1)
+    [*map(lambda edges,ifl_num: 
+            nx.set_edge_attributes(
+                G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}}
+                ),
+                sorted(G.edges()), ifl_num[1:]
+                )]
+    G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
+    return G
+    """
     else:
         [*map(lambda edges, node: nx.set_edge_attributes(G, {edges: {'ifd':'{}-0/0/{}'.format(ifd, node)}}), G.edges(), nodes)]
+    
     return G
-
+    """
 def starTopology(G, nodes, number_of_rr, logical_system):
     """
     Function used for create Graph of type a star.
     """
     nx.add_star(G, nodes)
-    nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector'}})
-    [*map(lambda node: nx.set_node_attributes(G, {node: {'type':'Router'}}), nodes[1:])]
-    genEdge(G, nodes, number_of_rr, logical_system)
+    loopbacks = net.genNet()
+    rrlo = ipaddr.pop(0)
+    nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector', 'loopback': rrlo}})
+    [*map(lambda node: 
+            nx.set_node_attributes(
+                G, {node: {'loopback':loopbacks}}
+                ),
+                nodes[1:]
+                )]
+    genStarEdge(G, nodes, logical_system)
     return G
 
 """

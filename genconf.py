@@ -1,17 +1,7 @@
 import topo
 import itertools
 import networkx as nx
-import ipaddress as ip
 from jinja2 import Template
-
-
-pool = '192.168.10.0/24'
-ifl = '0'  #unit number
-iface_addr = ''  #interface ip pool
-pu = '' #pear unit for interfaces
-
-loopbacks = [str(x) for x in (ip.IPv4Network(pool).hosts())]
-
 
 def getTemplate():
     """ 
@@ -40,7 +30,7 @@ def genConfig():
     template = getTemplate()
     units = getParams()
     nodes = sorted(G.nodes())
-    lunit = [*map(lambda hostname,unit,punit: template.render(node=hostname,ifl=unit,pu=punit), nodes, units['unit'], units['punit'])]
+    lunit = map(lambda hostname,unit,punit: template.render(node=hostname,ifl=unit,pu=punit), nodes, units['unit'], units['punit'])
     result = '\n'.join(lunit)
     with open('/home/sevudan/Scripts/projects/topogen/result.cfg','w') as cfg:
         cfg.write(result)
