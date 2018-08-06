@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 def topology():
     """
     Function used for create new Graph.
+    Execute this func first.
     """ 
     total_nodes = 5
     number_of_rr = 1   
