@@ -4,6 +4,14 @@ import gennet as net
 import networkx as nx
 import matplotlib.pyplot as plt
 
+"""
+ ifd     Refers to a physical device
+ ifl     Refers to a logical device
+ iff     Refers to an address family
+ ifa     Refers to an address entry
+ iif     Refers to an incoming interface, either an ifd or an ifl 
+         (uses a kernel interface index, not an SNMP index)
+"""
 
 def topology():
     """
@@ -11,8 +19,7 @@ def topology():
     Execute this func first.
     """ 
     total_nodes = 5
-    number_of_rr = 1   
-    logical_system = True
+    number_of_rr = 1
     number = list(range(0,total_nodes + 1))
     nodes = sorted(list(map(lambda x: 'R{}'.format(x),number)))
     if number_of_rr > 0:
@@ -23,30 +30,25 @@ def topology():
         fullMeshTopology(G)
     return G
 
-def genStarEdge(G, nodes, loopbacks, logical_system):
+def genStarEdge(G, nodes, loopbacks, logical_system=True):
     """
     Create edges attributes for Graph.
     """    
-    if logical_system is True: 
-        ifd = 'lt'
-    else: 
-        ifd = 'ge'
+    if logical_system is True: ifd = 'lt'
+    else: ifd = 'ge'
     edges_to_rr = zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:]))
     ifl_num = range(0,len(edges_to_rr) + 1)
-    [*map(lambda edges,ifl_num: 
+    [*map(lambda edges,ifl_num:
             nx.set_edge_attributes(
-                G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}}
-                ),
-                sorted(G.edges()), ifl_num[1:]
-                )]
+                G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}
+                    ipaddress: {'ifa':ipaddress}
+                    }
+            ),
+            sorted(G.edges()), ifl_num[1:])
+    ]
     G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
     return G
-    """
-    else:
-        [*map(lambda edges, node: nx.set_edge_attributes(G, {edges: {'ifd':'{}-0/0/{}'.format(ifd, node)}}), G.edges(), nodes)]
-    
-    return G
-    """
+
 def starTopology(G, nodes, number_of_rr, logical_system):
     """
     Function used for create Graph of type a star.
@@ -58,9 +60,10 @@ def starTopology(G, nodes, number_of_rr, logical_system):
     [*map(lambda node: 
             nx.set_node_attributes(
                 G, {node: {'loopback':loopbacks}}
-                ),
-                nodes[1:]
-                )]
+            ),
+            nodes[1:]
+            )
+    ]
     genStarEdge(G, nodes, logical_system)
     return G
 
