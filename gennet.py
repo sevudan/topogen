@@ -1,11 +1,13 @@
 import ipaddress as ip
 
-pool = '192.168.10.0/24'
-
-def genLoopback(pool='192.168.10.0/24'):
-	loopbacks = [str(x) for x in (ip.IPv4Network(pool).hosts())]
+def genLoopback(lopool):
+	loopbacks = [str(x) for x in (ip.IPv4Network(lopool).hosts())]
 	return loopbacks
 
-def genIfaddress(pool='10.250.0.0/23'):
-    loopbacks = [str(x) for x in (ip.IPv4Network(pool).hosts())]
-    return loopbacks
+def genIFaddress(ifpool):
+    arr = []
+    for addr in ip.ip_network(ifpool).subnets(new_prefix=31):
+        ipaddr = list(ip.IPv4Network(addr).hosts())
+        arr.append(ipaddr)
+    return arr
+    
