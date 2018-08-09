@@ -49,14 +49,21 @@ def gen_nodes(G, nodes, total_nodes, ls):
 
 def gen_edge(G, nodes, total_nodes, ls):
     """
-    Create edges attributes for Graph.
-    """    
+    Create edges attributes for nodes. Func create ip address and units
+    for interface.
+    """
     ifd = 'lt' if ls else 'ge'
+    # To determine new edges for nodes between RR and R routers.
     edges_to_r = list(zip(map(lambda x: 'R0',nodes[1:]),
                         map(lambda x: '{}'.format(x),nodes[1:]))
                     )
     edges_to_rr = list(zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:])))
+    # Get pool of ip address for edges.
     pool = gen_edge_addr(total_nodes)
+    # Get list of units (ifl)
+    total_edges = nx.number_of_edges(G)
+    units = gen_edge_unit(total_edges)
+    # Create new edges from R to RR.
     G.add_edges_from(edges_to_rr)
     # Set interface and ip address for interface between RR and other routers.    
     ifl_num = range(0, len(edges_to_r) + 1)
@@ -70,7 +77,7 @@ def gen_edge(G, nodes, total_nodes, ls):
     G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
     [*map(lambda edges, ifa:
         nx.set_edge_attributes(G, {edges: {'ip_address': '{}/31'.format(ifa)}}),
-        edges_to_r, ifl_num[1:], pool['neighbor'])]
+        edges_to_rr, pool['neighbor'])]
     return G
 
 def gen_edge_addr(total_nodes):
@@ -78,3 +85,9 @@ def gen_edge_addr(total_nodes):
     local_ifa = [ str(x[0]) for x in pool ]
     neighbor_ifa = [ str(x[1]) for x in pool ]
     return {'local':local_ifa, 'neighbor':neighbor_ifa}
+
+def gen_edge_unit(total_edges):
+    units = list(map(lambda var1,var2: [var1,var2] ,range(0,total_edges+1,2), range(1,total_edges+2,2)))
+    local_ifl = [ x[0] for x in units ]
+    neighbor_ifl = [ x[1] for x in units ]
+    return {'l_unit':local_ifl, 'r_unit':neighbor_ifl}
