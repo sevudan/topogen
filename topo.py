@@ -1,11 +1,11 @@
-#!/usr/sbin/python3.5
-
 import gennet as net
 import networkx as nx
 import matplotlib.pyplot as plt
-from address import *
+from ipaddress import *
 
 """
+ Variable acronims:
+
  ifd     Refers to a physical device
  ifl     Refers to a logical device
  iff     Refers to an address family
@@ -17,79 +17,64 @@ from address import *
 lopool = '192.168.10.0/24'
 ifpool = '10.250.0.0/23'
 
-def topology():
+def topology(total_nodes = 5, totalRR = 1, ls=True):
     """
     Function used for create new Graph.
     Execute this func first.
     """ 
-    total_nodes = 5
-    number_of_rr = 1
-    number = list(range(0,total_nodes + 1))
+    #Generate serial number for nodes
+    number = list(range(0,total_nodes))
+    #Generate nodes with name 'RX', where X is serial number 
     nodes = sorted(list(map(lambda x: 'R{}'.format(x),number)))
-    if number_of_rr > 0:
+    if totalRR > 0:
         G = nx.DiGraph(name='Network topology - Star')
-        starTopology(G, nodes, number_of_rr, logical_system)
+        nx.add_star(G, nodes)
+        gen_nodes(G, nodes, total_nodes, totalRR, ls=True)
+        gen_edge(G, nodes, total_nodes, ls=True)
     else: 
         G = nx.complete_graph(total_nodes)
         fullMeshTopology(G)
     return G
 
-def starTopology(G, nodes, number_of_rr, logical_system):
+def gen_nodes(G, nodes, total_nodes, ls):
     """
-    Function used for create Graph of type a star.
+    Function for creating nodes and node attributes.
     """
-    nx.add_star(G, nodes)
-    loopbacks = net.genNet()
-    rrlo = loopbacks.pop(0)
-    nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector', 'loopback': rrlo}})
-    [*map(lambda node: 
-            nx.set_node_attributes(
-                G, {node: {'loopback':loopbacks}}),
-                nodes[1:])
-    ]
-    genStarEdge(G, nodes, logical_system)
+    loopbacks = list(net.gen_loopback(lopool))[:total_nodes]
+    # set loopback addres for RR
+    nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector', 'loopback':loopbacks.pop(0)}}) 
+    # set loopback addres for other nodes
+    [*map(lambda node, lo: nx.set_node_attributes(G, {node: {'loopback':lo}}), nodes[1:], loopbacks)] 
     return G
 
-
-def genStarEdge(G, nodes, loopbacks, logical_system=True):
+def gen_edge(G, nodes, total_nodes, ls):
     """
     Create edges attributes for Graph.
     """    
-    if logical_system is True: ifd = 'lt'
-    else: ifd = 'ge'
-    edges_to_rr = zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:]))
-    ifl_num = range(0,len(edges_to_rr) + 1)
-    [*map(lambda edges,ifl_num:
-            nx.set_edge_attributes(
-                G, {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num)}},
-                sorted(G.edges()), ifl_num[1:]))
-    ]
+    ifd = 'lt' if ls else 'ge'
+    edges_to_r = list(zip(map(lambda x: 'R0',nodes[1:]),
+                        map(lambda x: '{}'.format(x),nodes[1:]))
+                    )
+    edges_to_rr = list(zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:])))
+    pool = gen_edge_addr(total_nodes)
+    G.add_edges_from(edges_to_rr)
+    # Set interface and ip address for interface between RR and other routers.    
+    ifl_num = range(0, len(edges_to_r) + 1)
+    [*map(lambda edges,ifl_num, ifa:
+        nx.set_edge_attributes(G, 
+            {edges:  {'ifd':'{}-0/0/{}'.format(ifd,ifl_num),
+                      'ip_address': '{}/31'.format(ifa)}
+            }),
+            edges_to_r, ifl_num[1:], pool['local'])]
+    # Set interface and ip address for interface between other routers and RR.
     G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
+    [*map(lambda edges, ifa:
+        nx.set_edge_attributes(G, {edges: {'ip_address': '{}/31'.format(ifa)}}),
+        edges_to_r, ifl_num[1:], pool['neighbor'])]
     return G
 
-def genEdgeAddr():
-    pool = net.genIFaddress(ifpool)
-    ifa = {'local':pool[0],'nei':pool[1]}
-    [*map(lambda edges,ifa:
-            nx.set_edge_attributes(
-                G, {edges: {'ip_address':'{}/31'.format(ifa)}},
-                sorted(G.edges()), ifa[0]))
-    ]
-
-
-"""
-def fullMeshTopology(G,number_of_rr,logical_system):
-    
-    Generate new topology type of Full Mesh.
-    
-    i = 0
-    genEdge(G, number_of_rr,logical_system)
-    return G
-
-node_labels = nx.get_edge_attributes(G, 'ifd')
-nx.draw_networkx_labels(G, pos, node_labels)
-nx.draw(G, with_labels=True)
-plt.show()
-"""
-
-
+def gen_edge_addr(total_nodes):
+    pool = list(net.gen_ifaddress(ifpool))[0:total_nodes]
+    local_ifa = [ str(x[0]) for x in pool ]
+    neighbor_ifa = [ str(x[1]) for x in pool ]
+    return {'local':local_ifa, 'neighbor':neighbor_ifa}
