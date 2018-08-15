@@ -29,8 +29,8 @@ def topology(total_nodes = 5, totalRR = 1, ls=True):
     if totalRR > 0:
         G = nx.DiGraph(name='Network topology - Star')
         nx.add_star(G, nodes)
-        gen_nodes(G, nodes, total_nodes, totalRR, ls=True)
-        gen_edge(G, nodes, total_nodes, ls=True)
+        gen_nodes(G, nodes, total_nodes, ls)
+        gen_edge(G, nodes, total_nodes, ls)
     else: 
         G = nx.complete_graph(total_nodes)
         fullMeshTopology(G)
@@ -57,7 +57,9 @@ def gen_edge(G, nodes, total_nodes, ls):
     edges_to_r = list(zip(map(lambda x: 'R0',nodes[1:]),
                         map(lambda x: '{}'.format(x),nodes[1:]))
                     )
-    edges_to_rr = list(zip(nodes[1:], map(lambda x: 'R{}'.format(0),nodes[1:])))
+    edges_to_rr = list(zip(nodes[1:], 
+                        map(lambda x: 'R{}'.format(0),nodes[1:]))
+                        )
     # Get pool of ip address for edges.
     pool = gen_edge_addr(total_nodes)
     # Get list of units (ifl)
@@ -67,26 +69,34 @@ def gen_edge(G, nodes, total_nodes, ls):
     G.add_edges_from(edges_to_rr)
     # Set interface and ip address for interface between RR and other routers.    
     ifl_num = range(0, len(edges_to_r) + 1)
-    [*map(lambda edges,ifl_num, ifa:
+    [*map(lambda edges,ifl_num, ifa, unit:
         nx.set_edge_attributes(G, 
             {edges:  {'ifd':'{}-0/0/{}'.format(ifd,ifl_num),
-                      'ip_address': '{}/31'.format(ifa)}
-            }),
-            edges_to_r, ifl_num[1:], pool['local'])]
+                      'unit':'{}'.format(unit),
+                      'ip_address': '{}/31'.format(ifa)}}
+            ),edges_to_r, ifl_num[1:], pool['local'], units['l_unit'])]
     # Set interface and ip address for interface between other routers and RR.
     G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
-    [*map(lambda edges, ifa:
-        nx.set_edge_attributes(G, {edges: {'ip_address': '{}/31'.format(ifa)}}),
-        edges_to_rr, pool['neighbor'])]
+    [*map(lambda edges, ifa, unit:
+        nx.set_edge_attributes(G, 
+            {edges: {'ip_address': '{}/31'.format(ifa),
+                     'unit': '{}'.format(unit)}}),
+        edges_to_rr, pool['neighbor'], units['r_unit'])]
     return G
 
 def gen_edge_addr(total_nodes):
+    '''
+    Function get ip address pool for interface.
+    '''
     pool = list(net.gen_ifaddress(ifpool))[0:total_nodes]
     local_ifa = [ str(x[0]) for x in pool ]
     neighbor_ifa = [ str(x[1]) for x in pool ]
     return {'local':local_ifa, 'neighbor':neighbor_ifa}
 
 def gen_edge_unit(total_edges):
+    '''
+    Function get a logical number unit for interface.
+    '''
     units = list(map(lambda var1,var2: [var1,var2] ,range(0,total_edges+1,2), range(1,total_edges+2,2)))
     local_ifl = [ x[0] for x in units ]
     neighbor_ifl = [ x[1] for x in units ]
