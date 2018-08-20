@@ -64,23 +64,24 @@ def gen_edge(G, nodes, total_nodes, ls):
     edges_to_rr = list(zip(nodes[1:], 
                         map(lambda x: 'R{}'.format(0),nodes[1:]))
                         )
+    # Create new edges from R to RR.
+    G.add_edges_from(edges_to_rr)
     # Get pool of ip address for edges.
     pool = gen_edge_addr(total_nodes)
     # Get list of units (ifl)
     total_edges = nx.number_of_edges(G)
     units = gen_edge_unit(total_edges)
-    # Create new edges from R to RR.
-    G.add_edges_from(edges_to_rr)
+    print(total_edges)
     # Set interface and ip address for interface between RR and other routers.    
-    ifl_num = range(0, len(edges_to_r) + 1)
+    ifl_num = range(1, len(edges_to_r)+1)
     [*map(
         lambda edges,ifl_num, ifa, unit:
             nx.set_edge_attributes(G, 
                 {edges:  {'ifd':'{}-0/0/{}'.format(ifd,ifl_num),
-                        'unit':'{}'.format(unit),
-                        'ip_address': '{}/31'.format(ifa)}}
+                        'ip_address': '{}/31'.format(ifa),
+                        'unit':'{}'.format(unit)}}
             ),
-            edges_to_r, ifl_num[1:], pool['local'], units['l_unit']
+            edges_to_r, ifl_num, pool['local'], units['l_unit']
         )]
     # Set interface and ip address for interface between other routers and RR.
     G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
@@ -97,7 +98,7 @@ def gen_edge_addr(total_nodes):
     '''
     Function get ip address pool for interface.
     '''
-    pool = list(net.gen_ifaddress(ifpool))[0:total_nodes]
+    pool = list(net.gen_ifaddress(ifpool))[:total_nodes-1]
     local_ifa = [ str(x[0]) for x in pool ]
     neighbor_ifa = [ str(x[1]) for x in pool ]
     return {'local':local_ifa, 'neighbor':neighbor_ifa}
@@ -106,7 +107,11 @@ def gen_edge_unit(total_edges):
     '''
     Function get a logical number unit for interface.
     '''
+    print(total_edges)
     units = list(map(lambda var1,var2: [var1,var2] ,range(0,total_edges+1,2), range(1,total_edges+2,2)))
     local_ifl = [ x[0] for x in units ]
     neighbor_ifl = [ x[1] for x in units ]
     return {'l_unit':local_ifl, 'r_unit':neighbor_ifl}
+    
+ def __main__():
+    pass
