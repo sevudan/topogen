@@ -44,7 +44,11 @@ def gen_nodes(G, nodes, total_nodes, ls):
     # set loopback addres for RR
     nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector', 'loopback':loopbacks.pop(0)}}) 
     # set loopback addres for other nodes
-    [*map(lambda node, lo: nx.set_node_attributes(G, {node: {'loopback':lo}}), nodes[1:], loopbacks)] 
+    [*map(
+        lambda node, lo:
+            nx.set_node_attributes(G, {node: {'loopback':lo}}), 
+            nodes[1:], loopbacks
+        )]            
     return G
 
 def gen_edge(G, nodes, total_nodes, ls):
@@ -69,19 +73,24 @@ def gen_edge(G, nodes, total_nodes, ls):
     G.add_edges_from(edges_to_rr)
     # Set interface and ip address for interface between RR and other routers.    
     ifl_num = range(0, len(edges_to_r) + 1)
-    [*map(lambda edges,ifl_num, ifa, unit:
-        nx.set_edge_attributes(G, 
-            {edges:  {'ifd':'{}-0/0/{}'.format(ifd,ifl_num),
-                      'unit':'{}'.format(unit),
-                      'ip_address': '{}/31'.format(ifa)}}
-            ),edges_to_r, ifl_num[1:], pool['local'], units['l_unit'])]
+    [*map(
+        lambda edges,ifl_num, ifa, unit:
+            nx.set_edge_attributes(G, 
+                {edges:  {'ifd':'{}-0/0/{}'.format(ifd,ifl_num),
+                        'unit':'{}'.format(unit),
+                        'ip_address': '{}/31'.format(ifa)}}
+            ),
+            edges_to_r, ifl_num[1:], pool['local'], units['l_unit']
+        )]
     # Set interface and ip address for interface between other routers and RR.
     G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
-    [*map(lambda edges, ifa, unit:
-        nx.set_edge_attributes(G, 
-            {edges: {'ip_address': '{}/31'.format(ifa),
-                     'unit': '{}'.format(unit)}}),
-        edges_to_rr, pool['neighbor'], units['r_unit'])]
+    [*map(
+        lambda edges, ifa, unit:
+            nx.set_edge_attributes(G, 
+                {edges: {'ip_address': '{}/31'.format(ifa),
+                        'unit': '{}'.format(unit)}}),
+            edges_to_rr, pool['neighbor'], units['r_unit']
+        )]
     return G
 
 def gen_edge_addr(total_nodes):
