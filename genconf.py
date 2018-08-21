@@ -32,6 +32,22 @@ def draw_topology(G):
     nx.draw(G, pos, font_size=16, with_labels=False)
     return(plt.show())
 
+def gen_config_lo(G, cfg):
+    lo_ifl = 0
+    for node in sorted(G.nodes):
+        d = dict(G[node])
+        hostname = node
+        loopback = G.node[node].get('loopback')
+        set_loopback = Template('set logical-systems {{ node }} interfaces lo0.{{ loopback_ifl }} family inet address {{ loopback_ifa }}')
+        result = set_loopback.render(
+                                    node = hostname, 
+                                    loopback_ifl = lo_ifl, 
+                                    loopback_ifa = loopback
+                                    )
+        result = '{}{}'.format(result,'\n')
+        cfg.write(result) 
+        lo_ifl += 1
+
 def genConfig():
     """
     Write result into file $PATH/result.cfg.
@@ -41,22 +57,10 @@ def genConfig():
     template = getTemplate()
     G = topo.topology()
     # Get node from list nodes.
-    lo_ifl = 0
     for node in sorted(G.nodes):
         d = dict(G[node])
         hostname = node
-        #Get loopback address for node 
-        loopback = G.node[node].get('loopback')
-        # Generate config for loopback interface
-        set_loopback = Template('set logical-systems {{ node }} interfaces lo0.{{ loopback_ifl }} family inet address {{ loopback_ifa }}')
-        result = set_loopback.render(
-                                    node = hostname, 
-                                    loopback_ifl = lo_ifl, 
-                                    loopback_ifa = loopback
-                                    )
-        result = '{}{}'.format(result,'\n')
-        cfg.write(result)
-        lo_ifl += 1
+        gen_config_lo(G, cfg)
         # Get attributes for node.
         peer = d.keys()
         for peer_node in peer:
