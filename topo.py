@@ -60,7 +60,7 @@ def gen_edge(G, nodes, total_nodes, ls):
     # To determine new edges for nodes between RR and R routers.
     edges_to_r = list(zip(map(lambda x: 'R0',nodes[1:]),
                         map(lambda x: '{}'.format(x),nodes[1:]))
-                    )
+                        )
     edges_to_rr = list(zip(nodes[1:], 
                         map(lambda x: 'R{}'.format(0),nodes[1:]))
                         )
@@ -71,26 +71,28 @@ def gen_edge(G, nodes, total_nodes, ls):
     # Get list of units (ifl)
     total_edges = nx.number_of_edges(G)
     units = gen_edge_unit(total_edges)
-    print(total_edges)
     # Set interface and ip address for interface between RR and other routers.    
     ifl_num = range(1, len(edges_to_r)+1)
     [*map(
-        lambda edges,ifl_num, ifa, unit:
+        lambda edges,ifl_num, ifa, unit, r_unit:
             nx.set_edge_attributes(G, 
-                {edges:  {'ifd':'{}-0/0/{}'.format(ifd,ifl_num),
+                {edges: {'ifd':'{}-0/0/{}'.format(ifd,ifl_num),
                         'ip_address': '{}/31'.format(ifa),
-                        'unit':'{}'.format(unit)}}
+                        'local_ifl':'{}'.format(unit),
+                        'peer_ifl':'{}'.format(r_unit)}}
             ),
-            edges_to_r, ifl_num, pool['local'], units['l_unit']
+            edges_to_r, ifl_num, pool['local'], units['l_unit'], units['r_unit']
         )]
     # Set interface and ip address for interface between other routers and RR.
     G.add_edges_from(edges_to_rr, ifd = '{}-0/0/1'.format(ifd))
     [*map(
-        lambda edges, ifa, unit:
+        lambda edges, ifa, unit, r_unit:
             nx.set_edge_attributes(G, 
                 {edges: {'ip_address': '{}/31'.format(ifa),
-                        'unit': '{}'.format(unit)}}),
-            edges_to_rr, pool['neighbor'], units['r_unit']
+                        'local_ifl': '{}'.format(unit),
+                        'peer_ifl':'{}'.format(r_unit)}}
+            ),
+            edges_to_rr, pool['neighbor'], units['r_unit'], units['l_unit']
         )]
     return G
 
@@ -107,11 +109,7 @@ def gen_edge_unit(total_edges):
     '''
     Function get a logical number unit for interface.
     '''
-    print(total_edges)
     units = list(map(lambda var1,var2: [var1,var2] ,range(0,total_edges+1,2), range(1,total_edges+2,2)))
     local_ifl = [ x[0] for x in units ]
     neighbor_ifl = [ x[1] for x in units ]
     return {'l_unit':local_ifl, 'r_unit':neighbor_ifl}
-    
- def __main__():
-    pass
