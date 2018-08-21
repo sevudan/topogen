@@ -1,5 +1,6 @@
 import topo
 import networkx as nx
+import matplotlib.pyplot as plt
 from jinja2 import Template    
 """
  Variable acronims:
@@ -11,6 +12,7 @@ from jinja2 import Template
  iif     Refers to an incoming interface, either an ifd or an ifl 
          (uses a kernel interface index, not an SNMP index)
 """    
+
 def getTemplate():
     """ 
     Get template from from file $PATH/template.cfg
@@ -19,6 +21,17 @@ def getTemplate():
         data = file.read()
         file.close()
     return Template(data)
+
+def draw_topology(G):
+    pos = nx.spring_layout(G)
+    for p in pos:  # raise text positions
+        pos[p][1] += 0.07
+    nx.draw_networkx_labels(G, pos)
+    edge_labels = nx.get_edge_attributes(G,'ifd')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    nx.draw(G, pos, font_size=16, with_labels=False)
+    return(plt.show())
+
 def genConfig():
     """
     Write result into file $PATH/result.cfg.
@@ -27,20 +40,37 @@ def genConfig():
     cfg = open('/home/sevudan/Scripts/projects/topogen/result.cfg','w')
     template = getTemplate()
     G = topo.topology()
-    for node in G.nodes:
+    # Get node from list nodes.
+    lo_ifl = 0
+    for node in sorted(G.nodes):
         d = dict(G[node])
         hostname = node
+        #Get loopback address for node 
+        loopback = G.node[node].get('loopback')
+        # Generate config for loopback interface
+        set_loopback = Template('set logical-systems {{ node }} interfaces lo0.{{ loopback_ifl }} family inet address {{ loopback_ifa }}')
+        result = set_loopback.render(
+                                    node = hostname, 
+                                    loopback_ifl = lo_ifl, 
+                                    loopback_ifa = loopback
+                                    )
+        result = '{}{}'.format(result,'\n')
+        cfg.write(result)
+        lo_ifl += 1
+        # Get attributes for node.
         peer = d.keys()
         for peer_node in peer:
             params = d.get(peer_node)
-            conf = template.render(node=hostname,
+            conf = template.render(
+                                    node=hostname,
                                     description = peer_node,
                                     ifd = params.get('ifd'),
                                     local_ifl = params.get('local_ifl'),
                                     peer_ifl = params.get('peer_ifl'),
-                                    ip_address = params.get('ip_address'))
+                                    ifa = params.get('ip_address')
+                                    )
             result = '{}{}'.format(conf,'\n')
             cfg.write(result)
     cfg.close()
-    print('Done')
+
 genConfig()
