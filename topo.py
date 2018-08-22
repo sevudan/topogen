@@ -8,38 +8,72 @@ from ipaddress import *
 
  ifd     Refers to a physical device
  ifl     Refers to a logical device
- iff     Refers to an address family
  ifa     Refers to an address entry
- iif     Refers to an incoming interface, either an ifd or an ifl 
-         (uses a kernel interface index, not an SNMP index)
+ ce      customer edge (client)
 """
 
 lopool = '192.168.10.0/24'
 ifpool = '10.250.0.0/23'
 
-def topology(total_nodes = 5, totalRR = 1, ls=True):
+def param():
+    try:
+        lopool = '192.168.10.0/24'
+        ifpool = '10.250.0.0/23'
+        total_nodes = 5 
+        totalRR = 0
+        total_ce = 2
+        ls = True
+        nodes = sum([total_nodes,total_ce])
+        if nodes > 16:
+            nodes/0 
+        else:
+            attr = {'lopool':lopool, 'ifpool':ifpool,
+                    'total_nodes':total_nodes, 'totalRR':totalRR,
+                    'total_ce':total_ce, 'ls':ls}
+        return attr
+    except ZeroDivisionError as error:
+        return error
+
+def topology():
+
     """
     Function used for create new Graph.
     Execute this func first.
-    """ 
-    #Generate serial number for nodes
-    number = list(range(0,total_nodes))
-    #Generate nodes with name 'RX', where X is serial number 
-    nodes = sorted(list(map(lambda x: 'R{}'.format(x),number)))
-    if totalRR > 0:
-        G = nx.DiGraph(name='Network topology - Star')
-        nx.add_star(G, nodes)
-        gen_nodes(G, nodes, total_nodes, ls)
-        gen_edge(G, nodes, total_nodes, ls)
-    else: 
-        G = nx.complete_graph(total_nodes)
-        fullMeshTopology(G)
-    return G
+    """
 
-def gen_nodes(G, nodes, total_nodes, ls):
+    try:
+        param()
+        if total_ce > 0:
+            nodes_ce = sorted(map(
+                                lambda x: 
+                                    'CE{}'.format(x),range(0,total_ce)
+                            ))
+        #Generate nodes with name 'RX', where X is serial number 
+        nodes = sorted(map(
+                        lambda x:
+                            'R{}'.format(x),range(0,total_nodes)
+                        ))
+        if totalRR > 0:
+            G = nx.DiGraph(name='Network topology - Star')
+            nx.add_star(G, nodes)
+            gen_nodes(G, nodes, total_nodes, nodes_ce, ls)
+            gen_edge(G, nodes, total_nodes, nodes_ce, ls)
+        else: 
+            G = nx.complete_graph(total_nodes)
+            fullMeshTopology(G)
+            gen_nodes(G, nodes, total_nodes, nodes_ce, ls)
+            gen_edge(G, nodes, total_nodes, nodes_ce, ls)
+        return G
+    except ZeroDivisionError:
+        print('Not valid total_nodes. Allowed  maximum 16 nodes!')
+
+def gen_nodes(G, nodes, total_nodes, nodes_ce, ls):
+
     """
     Function for creating nodes and node attributes.
     """
+    var = param()
+    lopool = var[lopool]
     loopbacks = list(net.gen_loopback(lopool))[:total_nodes]
     # set loopback addres for RR
     nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector', 'loopback':loopbacks.pop(0)}}) 
@@ -51,11 +85,13 @@ def gen_nodes(G, nodes, total_nodes, ls):
         )]            
     return G
 
-def gen_edge(G, nodes, total_nodes, ls):
+def gen_edge(G, nodes, total_nodes, nodes_ce, ls):
+
     """
     Create edges attributes for nodes. Func create ip address and units
     for interface.
     """
+
     ifd = 'lt' if ls else 'ge'
     # To determine new edges for nodes between RR and R routers.
     edges_to_r = list(zip(map(lambda x: 'R0',nodes[1:]),
@@ -97,18 +133,24 @@ def gen_edge(G, nodes, total_nodes, ls):
     return G
 
 def gen_edge_addr(total_nodes):
+
     '''
     Function get ip address pool for interface.
     '''
+
+    var = param()
+    ifpool = var[ifpool]
     pool = list(net.gen_ifaddress(ifpool))[:total_nodes-1]
     local_ifa = [ str(x[0]) for x in pool ]
     neighbor_ifa = [ str(x[1]) for x in pool ]
     return {'local':local_ifa, 'neighbor':neighbor_ifa}
 
 def gen_edge_unit(total_edges):
+
     '''
     Function get a logical number unit for interface.
     '''
+
     units = list(map(lambda var1,var2: [var1,var2] ,range(0,total_edges+1,2), range(1,total_edges+2,2)))
     local_ifl = [ x[0] for x in units ]
     neighbor_ifl = [ x[1] for x in units ]

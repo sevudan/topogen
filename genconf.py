@@ -56,11 +56,11 @@ def genConfig():
     cfg = open('/home/sevudan/Scripts/projects/topogen/result.cfg','w')
     template = getTemplate()
     G = topo.topology()
+    gen_config_lo(G, cfg)
     # Get node from list nodes.
     for node in sorted(G.nodes):
         d = dict(G[node])
         hostname = node
-        gen_config_lo(G, cfg)
         # Get attributes for node.
         peer = d.keys()
         for peer_node in peer:
