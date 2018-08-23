@@ -14,15 +14,22 @@ from jinja2 import Template
 """    
 
 def getTemplate():
+
     """ 
     Get template from from file $PATH/template.cfg
     """
+
     with open('/home/sevudan/Scripts/projects/topogen/template.cfg', 'r') as file:
         data = file.read()
         file.close()
     return Template(data)
 
 def draw_topology(G):
+
+    """
+    Draw topology.
+    """
+    
     pos = nx.spring_layout(G)
     for p in pos:  # raise text positions
         pos[p][1] += 0.07
@@ -33,6 +40,11 @@ def draw_topology(G):
     return(plt.show())
 
 def gen_config_lo(G, cfg):
+
+    """
+    Generate loopback interfaces with loopback and units for nodes.
+    """
+
     lo_ifl = 0
     for node in sorted(G.nodes):
         d = dict(G[node])
@@ -49,10 +61,12 @@ def gen_config_lo(G, cfg):
         lo_ifl += 1
 
 def genConfig():
+
     """
+    Generate config for all nodes from template.
     Write result into file $PATH/result.cfg.
-    Execute this func first.
     """
+
     cfg = open('/home/sevudan/Scripts/projects/topogen/result.cfg','w')
     template = getTemplate()
     G = topo.topology()

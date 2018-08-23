@@ -12,25 +12,25 @@ from ipaddress import *
  ce      customer edge (client)
 """
 
-lopool = '192.168.10.0/24'
-ifpool = '10.250.0.0/23'
-
 def param():
     try:
-        lopool = '192.168.10.0/24'
-        ifpool = '10.250.0.0/23'
-        total_nodes = 5 
+        # chek ip_address
+        lopool = str(IPv4Network('192.168.10.0/24'))
+        ifpool = str(IPv4Network('10.250.0.0/23'))
+        core_nodes = 5 
         totalRR = 0
         total_ce = 2
         ls = True
-        nodes = sum([total_nodes,total_ce])
+        nodes = sum([core_nodes,total_ce])
         if nodes > 16:
             nodes/0 
         else:
-            attr = {'lopool':lopool, 'ifpool':ifpool,
-                    'total_nodes':total_nodes, 'totalRR':totalRR,
+            attr = {'lopool':lopool, 'ifpool':ifpool, 'nodes':nodes,
+                    'core_nodes':core_nodes, 'totalRR':totalRR,
                     'total_ce':total_ce, 'ls':ls}
         return attr
+    except AddressValueError as value_error:
+        return value_error
     except ZeroDivisionError as error:
         return error
 
@@ -51,30 +51,32 @@ def topology():
         #Generate nodes with name 'RX', where X is serial number 
         nodes = sorted(map(
                         lambda x:
-                            'R{}'.format(x),range(0,total_nodes)
+                            'R{}'.format(x),range(0,core_nodes)
                         ))
         if totalRR > 0:
             G = nx.DiGraph(name='Network topology - Star')
             nx.add_star(G, nodes)
-            gen_nodes(G, nodes, total_nodes, nodes_ce, ls)
-            gen_edge(G, nodes, total_nodes, nodes_ce, ls)
+            gen_core_nodes(G, nodes, core_nodes, nodes_ce, ls)
+            gen_edge(G, nodes, core_nodes, nodes_ce, ls)
         else: 
-            G = nx.complete_graph(total_nodes)
-            fullMeshTopology(G)
-            gen_nodes(G, nodes, total_nodes, nodes_ce, ls)
-            gen_edge(G, nodes, total_nodes, nodes_ce, ls)
+            G = nx.complete_graph(core_nodes)
+            gen_core_nodes(G, nodes, core_nodes, nodes_ce, ls)
+            gen_edge(G, nodes, core_nodes, nodes_ce, ls)
         return G
+    except AddressValueError as value_error:
+        print('Error: {}'.format(value_error))
     except ZeroDivisionError:
-        print('Not valid total_nodes. Allowed  maximum 16 nodes!')
+        print('Not valid core_nodes. Allowed  maximum 16 nodes!')
 
-def gen_nodes(G, nodes, total_nodes, nodes_ce, ls):
+def gen_core_nodes(G, nodes, core_nodes, ls):
 
     """
-    Function for creating nodes and node attributes.
+    Function for creating CORE nodes and attributes.
     """
+
     var = param()
     lopool = var[lopool]
-    loopbacks = list(net.gen_loopback(lopool))[:total_nodes]
+    loopbacks = list(net.gen_loopback(lopool))[:core_nodes]
     # set loopback addres for RR
     nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector', 'loopback':loopbacks.pop(0)}}) 
     # set loopback addres for other nodes
@@ -85,7 +87,15 @@ def gen_nodes(G, nodes, total_nodes, nodes_ce, ls):
         )]            
     return G
 
-def gen_edge(G, nodes, total_nodes, nodes_ce, ls):
+def gen_edge_nodes(G, nodes, nodes_ce, ls):
+
+    """
+    Function for creating CORE nodes and attributes.
+    """
+
+
+
+def gen_edge(G, nodes, core_nodes, nodes_ce, ls):
 
     """
     Create edges attributes for nodes. Func create ip address and units
@@ -103,7 +113,7 @@ def gen_edge(G, nodes, total_nodes, nodes_ce, ls):
     # Create new edges from R to RR.
     G.add_edges_from(edges_to_rr)
     # Get pool of ip address for edges.
-    pool = gen_edge_addr(total_nodes)
+    pool = gen_edge_addr(core_nodes)
     # Get list of units (ifl)
     total_edges = nx.number_of_edges(G)
     units = gen_edge_unit(total_edges)
@@ -132,7 +142,7 @@ def gen_edge(G, nodes, total_nodes, nodes_ce, ls):
         )]
     return G
 
-def gen_edge_addr(total_nodes):
+def gen_edge_addr(core_nodes):
 
     '''
     Function get ip address pool for interface.
@@ -140,7 +150,7 @@ def gen_edge_addr(total_nodes):
 
     var = param()
     ifpool = var[ifpool]
-    pool = list(net.gen_ifaddress(ifpool))[:total_nodes-1]
+    pool = list(net.gen_ifaddress(ifpool))[:core_nodes-1]
     local_ifa = [ str(x[0]) for x in pool ]
     neighbor_ifa = [ str(x[1]) for x in pool ]
     return {'local':local_ifa, 'neighbor':neighbor_ifa}
