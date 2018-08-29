@@ -1,38 +1,20 @@
+import random
 import gennet as net
 import networkx as nx
 import matplotlib.pyplot as plt
 from ipaddress import *
 
 """
- Variable acronims:
-
- ifd     Refers to a physical device
- ifl     Refers to a logical device
- ifa     Refers to an address entry
- ce      customer edge (client)
+    Variable acronims:
+    ce      customer edge (client)
+    pe      Provider edges node
+    p       Core provider routers
+    ce      customer edge
+    ifd     Refers to a physical device
+    ifl     Refers to a logical device
+    ifa     Refers to an address entry
 """
 
-def param():
-    try:
-        # chek ip_address
-        lopool = str(IPv4Network('192.168.10.0/24'))
-        ifpool = str(IPv4Network('10.250.0.0/23'))
-        core_nodes = 5 
-        totalRR = 0
-        total_ce = 2
-        ls = True
-        nodes = sum([core_nodes,total_ce])
-        if nodes > 16:
-            nodes/0 
-        else:
-            attr = {'lopool':lopool, 'ifpool':ifpool, 'nodes':nodes,
-                    'core_nodes':core_nodes, 'totalRR':totalRR,
-                    'total_ce':total_ce, 'ls':ls}
-        return attr
-    except AddressValueError as value_error:
-        return value_error
-    except ZeroDivisionError as error:
-        return error
 
 def topology():
 
@@ -42,7 +24,10 @@ def topology():
     """
 
     try:
-        param()
+        attr = param()
+        core_nodes = attr['core_nodes']
+        total_ce = attr['total_ce']
+        ls = attr['ls']
         if total_ce > 0:
             nodes_ce = sorted(map(
                                 lambda x: 
@@ -68,32 +53,57 @@ def topology():
     except ZeroDivisionError:
         print('Not valid core_nodes. Allowed  maximum 16 nodes!')
 
-def gen_core_nodes(G, nodes, core_nodes, ls):
+def param():
+    try:
+        # chek ip_address
+        lo_pool = str(IPv4Network('192.168.10.0/24'))
+        ifpool = str(IPv4Network('10.250.0.0/23'))
+        # set other params
+        core_nodes = 5 
+        totalRR = 1
+        total_ce = 2
+        ls = True
+        nodes = sum([core_nodes,total_ce])
+        if nodes > 16:
+            nodes/0 
+        else:
+            attr = {'lo_pool':lo_pool, 'ifpool':ifpool, 'nodes':nodes,
+                    'core_nodes':core_nodes, 'totalRR':totalRR,
+                    'total_ce':total_ce, 'ls':ls}
+        return attr
+    except AddressValueError as value_error:
+        return value_error
+    except ZeroDivisionError as error:
+        return error
 
+def gen_core_nodes(G, nodes, core_nodes, ls):
     """
     Function for creating CORE nodes and attributes.
     """
-
     var = param()
-    lopool = var[lopool]
-    loopbacks = list(net.gen_loopback(lopool))[:core_nodes]
+    lo_pool = var['lo_pool']
+    loopbacks = list(net.gen_loopback(lo_pool))[:core_nodes]
     # set loopback addres for RR
     nx.set_node_attributes(G, {'R0': {'type':'Route-Reflector', 'loopback':loopbacks.pop(0)}}) 
     # set loopback addres for other nodes
     [*map(
-        lambda node, lo:
-            nx.set_node_attributes(G, {node: {'loopback':lo}}), 
+        lambda node, loopback:
+            nx.set_node_attributes(G, {node: {'loopback':loopback}}), 
             nodes[1:], loopbacks
         )]            
     return G
 
-def gen_edge_nodes(G, nodes, nodes_ce, ls):
-
+def gen_edge_node(G, nodes, nodes_ce, ls):
     """
-    Function for creating CORE nodes and attributes.
+    Function for creating edges for nodes and attributes.
     """
-
-
+    total_ce = len(nodes_ce)
+    # choice CORE nodes for peers.
+    pe_peers = random.sample(nodes, total_ce)
+    edges_to_ce = list(zip(pe_peers, 
+                        map(lambda x: 'CE{}'.format(x),range(total_ce)))
+                        )
+    G.add_edges_from(edges_to_ce)
 
 def gen_edge(G, nodes, core_nodes, nodes_ce, ls):
 
