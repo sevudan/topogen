@@ -48,7 +48,8 @@ def topology():
                         sum_nodes, total_ce, nodes_ce, ls)
         else: 
             G = nx.complete_graph(core_nodes)
-            gen_edge(G, nodes, core_nodes, nodes_ce, ls)
+            gen_edge(G, nodes, total_rr, core_nodes, pe_peers, 
+                        sum_nodes, total_ce, nodes_ce, ls)
         return G
     except AddressValueError as value_error:
         print('Error: {}'.format(value_error))
